@@ -16,6 +16,9 @@
 			
 			import spark.events.IndexChangeEvent;
 			
+			import leelib.util.flvEncoder.ByteableByteArray;
+			import leelib.util.flvEncoder.FileStreamFlvEncoder;
+			
 			public var _cam:Camera;
 			public var _cam2:Camera;
 			public var _activeCam:Camera;
@@ -28,6 +31,15 @@
 			public var ldr:Loader;
 			
 			public var doOverlay:Boolean = false;
+			public var doRecord:Boolean = true;
+			public var doBroadcast:Boolean = false;
+			
+			public var _nc:NetConnection = new NetConnection();
+			public var _ns:NetStream;
+			public var flvEnc:FileStreamFlvEncoder;
+			public var myFile:File;
+			
+			public var oldPosition:Number;
 			
 			protected function windowedapplication1_applicationCompleteHandler(event:FlexEvent):void
 			{
@@ -48,8 +60,44 @@
 				timer.start();
 				camDropdown.selectedIndex = 1;
 				camDropdown.enabled = true;
+						
+				myFile = File.desktopDirectory.resolvePath("test.flv");
+				flvEnc = new FileStreamFlvEncoder(myFile, _cam.fps);
+				flvEnc.fileStream.open(myFile, FileMode.UPDATE);
+				oldPosition = flvEnc.fileStream.position;
+				flvEnc.setVideoProperties(_cam.width, _cam.height);
+				flvEnc.start();
+				stopRecord.enabled = true;
+				
+				_nc.addEventListener(NetStatusEvent.NET_STATUS, ncCallback);
+				_nc.connect(null);
 			}
 			
+			protected function filewrite_handler(e:OutputProgressEvent):void {
+				trace("Write to file!");				
+			}
+			
+			protected function ncCallback(e:NetStatusEvent):void
+			{
+				if(e.info.code == "NetConnection.Connect.Success")
+				{
+					_ns = new NetStream(_nc);
+					_ns.play(null);
+					_ns.client = this;
+					var vid:Video = new Video();
+					vid.width = 320;
+					vid.height = 280;
+					vid.attachNetStream(_ns);
+					NsVideoDisplay.source = vid;
+					NsVideoDisplay.videoObject;
+					doBroadcast = true;
+				}
+				
+			}
+			
+			public function onMetaData(info:Object):void {
+				trace("metadata: duration=" + info.duration + " framerate=" + info.framerate);
+			}
 			protected function DataLoadedCallback(e:Event):void 
 			{
 				trace("loaded soul.gif");
@@ -78,6 +126,24 @@
 					_bmpData.draw(soulData);
 				}
 				bmpPreview.source = _bmpData;
+				if(doRecord) 
+				{
+					//trace(flvEnc.fileStream.position - oldPosition);
+					flvEnc.addFrame(_bmpData, null);
+					flvEnc.updateDurationMetadata();
+					
+					var newPosition:Number = flvEnc.fileStream.position;
+					var positionDelta:Number = newPosition - oldPosition; 
+					var myByteArray:ByteArray = new ByteArray();
+					
+					flvEnc.fileStream.position = oldPosition;
+					flvEnc.fileStream.readBytes(myByteArray, 0, positionDelta);	
+					
+					if(doBroadcast)
+						_ns.appendBytes(myByteArray);
+					
+					oldPosition = flvEnc.fileStream.position;
+				}
 			}
 			
 			protected function windowedapplication1_frameConstructedHandler(event:Event):void
@@ -107,6 +173,13 @@
 				_vid.attachCamera(Camera.getCamera(event.newIndex.toString()));
 			}
 			
+			protected function stopRecord_clickHandler(event:MouseEvent):void
+			{
+				doRecord = false;
+				flvEnc.fileStream.close();
+				flvEnc.kill();
+			}
+			
 		]]>
 	</fx:Script>
 	<s:VGroup>
@@ -114,10 +187,12 @@
 			<mx:UIComponent id="VideoContainer" width="320" height="280" />
 			<s:BitmapImage id="bmpPreview" width="320" height="280" />
 		</s:HGroup>
+		<s:VideoDisplay id="NsVideoDisplay" width="320" height="280" />
 		<s:HGroup>
 			<s:BitmapImage id="soulPreview" />
 			<s:Button label="toggle overlay" id="overlay" enabled="false" click="overlay_clickHandler(event)" />
 			<s:DropDownList id="camDropdown" width="200" dataProvider="{camList}" requireSelection="true" enabled="false" change="camDropdown_changeHandler(event)" />
+			<s:Button id="stopRecord" label="Stop Record" click="stopRecord_clickHandler(event)" enabled="false" />
 			<!--<s:Button label="switch camera" id="switchCam" enabled="false" click="switchCam_clickHandler(event)" />-->
 		</s:HGroup>
 	</s:VGroup>

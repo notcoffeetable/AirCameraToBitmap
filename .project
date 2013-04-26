@@ -21,4 +21,10 @@
 		<nature>com.adobe.flexbuilder.project.flexnature</nature>
 		<nature>com.adobe.flexbuilder.project.actionscriptnature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>FlvEncoder</name>
+			<value>file:/C:/src/actionscript/leelib/src/leelib/util/flvEncoder/alchemy/flvEncodeHelper.swc</value>
+		</variable>
+	</variableList>
 </projectDescription>
