@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   width="700"
+					   height="400"
+					   applicationComplete="windowedapplication1_applicationCompleteHandler(event)">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import mx.core.UIComponent;
+			import mx.events.FlexEvent;
+			
+			public var _cam:Camera;
+			public var _vid:Video;
+			public var _bmpData:BitmapData;
+			public var timer:Timer;
+			
+			protected function windowedapplication1_applicationCompleteHandler(event:FlexEvent):void
+			{
+				_vid = new Video();
+				_cam = Camera.getCamera();
+				_vid.attachCamera(_cam);
+				timer = new Timer(100, 20);
+				timer.addEventListener(TimerEvent.TIMER, timer_callback);
+				VideoContainer.addChild(_vid);
+				timer.start();
+			}
+			
+			protected function timer_callback(event:TimerEvent):void
+			{
+				drawBitmap();
+			}
+			
+			protected function drawBitmap():void
+			{
+				trace("About to draw bitmap");
+				_bmpData = new BitmapData(320, 280);
+				_bmpData.draw(VideoContainer);
+				bmpPreview.source = _bmpData;
+			}
+			
+		]]>
+	</fx:Script>
+	<s:HGroup>
+		<mx:UIComponent id="VideoContainer" width="320" height="280" />
+		<s:BitmapImage id="bmpPreview" width="320" height="280" />
+	</s:HGroup>
+</s:WindowedApplication>
