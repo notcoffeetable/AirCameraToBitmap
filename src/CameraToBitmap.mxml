@@ -20,10 +20,12 @@
 			
 			protected function windowedapplication1_applicationCompleteHandler(event:FlexEvent):void
 			{
+				trace(Camera.names);
+				Security.showSettings(SecurityPanel.CAMERA);
 				_vid = new Video();
-				_cam = Camera.getCamera();
+				_cam = Camera.getCamera("2");
 				_vid.attachCamera(_cam);
-				timer = new Timer(100, 20);
+				timer = new Timer(16.6, 0);
 				timer.addEventListener(TimerEvent.TIMER, timer_callback);
 				VideoContainer.addChild(_vid);
 				timer.start();
@@ -36,10 +38,15 @@
 			
 			protected function drawBitmap():void
 			{
-				trace("About to draw bitmap");
+				//trace("About to draw bitmap");
 				_bmpData = new BitmapData(320, 280);
 				_bmpData.draw(VideoContainer);
 				bmpPreview.source = _bmpData;
+			}
+			
+			protected function windowedapplication1_frameConstructedHandler(event:Event):void
+			{
+				drawBitmap();
 			}
 			
 		]]>
