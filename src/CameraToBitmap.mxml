@@ -6,6 +6,7 @@
 					   height="400"
 					   applicationComplete="windowedapplication1_applicationCompleteHandler(event)">
 	<fx:Declarations>
+		<s:ArrayList id="camList" />
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
 	</fx:Declarations>
 	<fx:Script>
@@ -13,22 +14,51 @@
 			import mx.core.UIComponent;
 			import mx.events.FlexEvent;
 			
+			import spark.events.IndexChangeEvent;
+			
 			public var _cam:Camera;
+			public var _cam2:Camera;
+			public var _activeCam:Camera;
 			public var _vid:Video;
 			public var _bmpData:BitmapData;
 			public var timer:Timer;
 			
+			
+			public var soulData:Bitmap;
+			public var ldr:Loader;
+			
+			public var doOverlay:Boolean = false;
+			
 			protected function windowedapplication1_applicationCompleteHandler(event:FlexEvent):void
 			{
+				camList.source = Camera.names;
+				ldr = new Loader();
+				ldr.load(new URLRequest("soul.gif"));
+				ldr.contentLoaderInfo.addEventListener(Event.COMPLETE, DataLoadedCallback);
 				trace(Camera.names);
 				Security.showSettings(SecurityPanel.CAMERA);
 				_vid = new Video();
-				_cam = Camera.getCamera("2");
+				_cam = Camera.getCamera("1");
+				_cam2 = Camera.getCamera("2");
+				_activeCam = _cam;
 				_vid.attachCamera(_cam);
 				timer = new Timer(16.6, 0);
 				timer.addEventListener(TimerEvent.TIMER, timer_callback);
 				VideoContainer.addChild(_vid);
 				timer.start();
+				camDropdown.selectedIndex = 1;
+				camDropdown.enabled = true;
+			}
+			
+			protected function DataLoadedCallback(e:Event):void 
+			{
+				trace("loaded soul.gif");
+				soulData = e.target.content;	
+				soulPreview.width = soulData.width;
+				soulPreview.height = soulData.height;
+				
+				soulPreview.source = soulData.bitmapData;
+				overlay.enabled = true;
 			}
 			
 			protected function timer_callback(event:TimerEvent):void
@@ -40,7 +70,13 @@
 			{
 				//trace("About to draw bitmap");
 				_bmpData = new BitmapData(320, 280);
+				
 				_bmpData.draw(VideoContainer);
+				if(doOverlay)
+				{
+					//trace("Doing overlay");
+					_bmpData.draw(soulData);
+				}
 				bmpPreview.source = _bmpData;
 			}
 			
@@ -49,10 +85,40 @@
 				drawBitmap();
 			}
 			
+			protected function overlay_clickHandler(event:MouseEvent):void
+			{
+				doOverlay = !doOverlay;
+			}
+			
+			protected function switchCam_clickHandler(event:MouseEvent):void
+			{
+				trace(_activeCam.name);
+				if(_activeCam.name == _cam.name) {
+					_activeCam = _cam2;
+					_vid.attachCamera(_cam2);
+				}else{
+					_activeCam = _cam;
+					_vid.attachCamera(_cam);
+				}
+			}
+			
+			protected function camDropdown_changeHandler(event:IndexChangeEvent):void
+			{
+				_vid.attachCamera(Camera.getCamera(event.newIndex.toString()));
+			}
+			
 		]]>
 	</fx:Script>
-	<s:HGroup>
-		<mx:UIComponent id="VideoContainer" width="320" height="280" />
-		<s:BitmapImage id="bmpPreview" width="320" height="280" />
-	</s:HGroup>
+	<s:VGroup>
+		<s:HGroup>
+			<mx:UIComponent id="VideoContainer" width="320" height="280" />
+			<s:BitmapImage id="bmpPreview" width="320" height="280" />
+		</s:HGroup>
+		<s:HGroup>
+			<s:BitmapImage id="soulPreview" />
+			<s:Button label="toggle overlay" id="overlay" enabled="false" click="overlay_clickHandler(event)" />
+			<s:DropDownList id="camDropdown" width="200" dataProvider="{camList}" requireSelection="true" enabled="false" change="camDropdown_changeHandler(event)" />
+			<!--<s:Button label="switch camera" id="switchCam" enabled="false" click="switchCam_clickHandler(event)" />-->
+		</s:HGroup>
+	</s:VGroup>
 </s:WindowedApplication>
